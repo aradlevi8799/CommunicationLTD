@@ -46,10 +46,10 @@ def hash_password(password: str) -> tuple[str, str]:
 
 def verify_password(password: str, stored_hash: str, salt: str) -> bool:
     """
-    compare_digest מונע timing-attack: ה-loop רץ זמן קבוע ללא קשר להתאמה.
+    compare_digest מונע timing-attack: השוואה בזמן קבוע ללא קשר להתאמה.
     """
     h = hmac.new(salt.encode("utf-8"), password.encode("utf-8"), hashlib.sha256)
-    return h.hexdigest() == stored_hash
+    return hmac.compare_digest(h.hexdigest(), stored_hash)
 
 
 # ─────────────────────────────────────────────
