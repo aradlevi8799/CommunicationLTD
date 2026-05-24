@@ -1,0 +1,21 @@
+{
+    "password_policy": {
+        "min_length": 10,
+        "require_uppercase": true,
+        "require_lowercase": true,
+        "require_digits": true,
+        "require_special": true,
+        "history_count": 3,
+        "dictionary": ["password", "123456789", "qwerty123", "abc123456", "admin1234", "letmein12", "welcome12", "monkey123", "dragon123", "master123"]
+    },
+    "security": {
+        "max_login_attempts": 3,
+        "secret_key": "change-this-to-a-random-secret-in-production-min-32-chars"
+    },
+    "email": {
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "sender_email": "your-email@gmail.com",
+        "sender_password": "your-app-password"
+    }
+}

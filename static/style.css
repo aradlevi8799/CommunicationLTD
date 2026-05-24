@@ -1,0 +1,190 @@
+/* ============================================
+   Communication_LTD – Stylesheet
+   RTL Hebrew, clean and modern
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f0f4f8;
+  color: #2d3748;
+  direction: rtl;
+  min-height: 100vh;
+}
+
+/* ── Navbar ── */
+.navbar {
+  background: #1a365d;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.nav-brand { font-size: 1.25rem; font-weight: 700; }
+
+.nav-links { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+.nav-links a {
+  color: #90cdf4;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: white; }
+.nav-user { font-size: 0.9rem; color: #bee3f8; }
+
+/* ── Container ── */
+.container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* ── Cards ── */
+.card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.card h2, .card h3 { margin-bottom: 1.25rem; color: #1a365d; }
+h2 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #1a365d; }
+
+/* ── Alerts ── */
+.alert {
+  padding: 0.85rem 1.2rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  border-right: 4px solid;
+}
+
+.alert-success { background: #f0fff4; color: #276749; border-color: #38a169; }
+.alert-error   { background: #fff5f5; color: #c53030; border-color: #e53e3e; }
+.alert-info    { background: #ebf8ff; color: #2b6cb0; border-color: #3182ce; }
+.alert-warning { background: #fffaf0; color: #c05621; border-color: #ed8936; }
+
+/* ── Forms ── */
+.form-group {
+  margin-bottom: 1.1rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 1.5px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #f7fafc;
+  direction: rtl;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49,130,206,0.15);
+  background: white;
+}
+
+.hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: #718096;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-block;
+  padding: 0.7rem 1.8rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 0.5rem;
+}
+
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+  background: #3182ce;
+  color: white;
+}
+.btn-primary:hover { background: #2b6cb0; }
+
+/* ── Form footer ── */
+.form-footer {
+  text-align: center;
+  margin-top: 1.2rem;
+  font-size: 0.9rem;
+  color: #718096;
+}
+.form-footer a { color: #3182ce; text-decoration: none; }
+.form-footer a:hover { text-decoration: underline; }
+
+/* ── New customer banner ── */
+.new-customer-banner {
+  background: #f0fff4;
+  border: 1.5px solid #68d391;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  color: #276749;
+}
+
+/* ── Data table ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.data-table th {
+  background: #2d3748;
+  color: white;
+  padding: 0.7rem 0.9rem;
+  text-align: right;
+  font-weight: 600;
+}
+
+.data-table td {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table tr:hover td { background: #f7fafc; }
+.data-table tr:last-child td { border-bottom: none; }
+
+.empty-state {
+  text-align: center;
+  color: #a0aec0;
+  padding: 2rem;
+}

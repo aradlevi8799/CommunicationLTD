@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}הרשמה – Comunication_LTD{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>📝 הרשמה למערכת</h2>
+
+  <form method="POST">
+    <div class="form-group">
+      <label for="username">שם משתמש</label>
+      <input type="text" id="username" name="username" required placeholder="בחר שם משתמש" />
+    </div>
+
+    <div class="form-group">
+      <label for="email">כתובת מייל</label>
+      <input type="email" id="email" name="email" required placeholder="your@email.com" />
+    </div>
+
+    <div class="form-group">
+      <label for="password">סיסמא</label>
+      <input type="password" id="password" name="password" required placeholder="סיסמא מורכבת" />
+      <small class="hint">
+        לפחות 10 תווים, כולל: אות גדולה, אות קטנה, ספרה ותו מיוחד
+      </small>
+    </div>
+
+    <button type="submit" class="btn btn-primary">הירשם</button>
+  </form>
+
+  <p class="form-footer">
+    כבר רשום? <a href="{{ url_for('login') }}">התחבר כאן</a>
+  </p>
+</div>
+{% endblock %}

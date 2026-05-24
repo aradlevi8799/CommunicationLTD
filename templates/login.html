@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}התחברות – Comunication_LTD{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>🔐 כניסה למערכת מידע Comunication_LTD</h2>
+
+  <form method="POST">
+    <div class="form-group">
+      <label for="username">שם משתמש</label>
+      <input type="text" id="username" name="username" required placeholder="שם משתמש" />
+    </div>
+
+    <div class="form-group">
+      <label for="password">סיסמא</label>
+      <input type="password" id="password" name="password" required placeholder="סיסמא" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">התחבר</button>
+  </form>
+
+  <p class="form-footer">
+    <a href="{{ url_for('forgot_password') }}">שכחת סיסמא?</a>
+    &nbsp;|&nbsp;
+    <a href="{{ url_for('register') }}">הרשמה</a>
+  </p>
+</div>
+{% endblock %}

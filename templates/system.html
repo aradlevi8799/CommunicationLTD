@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}מערכת – Comunication_LTD{% endblock %}
+
+{% block content %}
+<h2>🏢 מערכת ניהול לקוחות – Comunication_LTD</h2>
+
+{% if version == "vulnerable" %}
+  <div class="alert alert-warning">
+    ⚠️ <strong>גרסה פגיעה</strong> – ללא הגנה מפני XSS ו-SQLi (לצרכי הדגמה בלבד)
+  </div>
+{% else %}
+  <div class="alert alert-info">
+    ✅ <strong>גרסה מאובטחת</strong> – Parameterized Queries + HTML Escaping
+  </div>
+{% endif %}
+
+<!-- הוספת לקוח חדש -->
+<div class="card">
+  <h3>➕ הוספת לקוח חדש</h3>
+  <form method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="name">שם לקוח *</label>
+        <input type="text" id="name" name="name" required placeholder="שם מלא" />
+      </div>
+      <div class="form-group">
+        <label for="email">מייל</label>
+        <input type="email" id="email" name="email" placeholder="email@example.com" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="phone">טלפון</label>
+        <input type="text" id="phone" name="phone" placeholder="05X-XXXXXXX" />
+      </div>
+      <div class="form-group">
+        <label for="package">חבילה</label>
+        <select id="package" name="package">
+          <option value="">-- בחר חבילה --</option>
+          <option value="basic">בסיסית</option>
+          <option value="standard">סטנדרט</option>
+          <option value="premium">פרמיום</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">הוסף לקוח</button>
+  </form>
+</div>
+
+<!-- הצגת שם הלקוח החדש שהוזן -->
+{% if new_customer_name %}
+  <div class="new-customer-banner">
+    🎉 לקוח חדש נוסף:
+    {% if version == "vulnerable" %}
+      {# ⚠️ VULNERABLE: | safe עוקף את ה-autoescaping של Jinja2 → XSS! #}
+      <strong>{{ new_customer_name | safe }}</strong>
+    {% else %}
+      {# ✅ SECURE: Jinja2 מקודד אוטומטית (< → &lt; וכו') #}
+      <strong>{{ new_customer_name }}</strong>
+    {% endif %}
+  </div>
+{% endif %}
+
+<!-- טבלת לקוחות -->
+<div class="card">
+  <h3>📋 רשימת לקוחות</h3>
+  {% if customers %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>שם</th>
+          <th>מייל</th>
+          <th>טלפון</th>
+          <th>חבילה</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td>
+            {% if version == "vulnerable" %}
+              {# ⚠️ VULNERABLE: שם מוצג ללא קידוד → XSS מאוחסן #}
+              {{ c.name | safe }}
+            {% else %}
+              {# ✅ SECURE: Jinja2 autoescaping #}
+              {{ c.name }}
+            {% endif %}
+          </td>
+          <td>{{ c.email }}</td>
+          <td>{{ c.phone }}</td>
+          <td>{{ c.package }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty-state">אין לקוחות במערכת עדיין.</p>
+  {% endif %}
+</div>
+{% endblock %}

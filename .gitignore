@@ -1,0 +1,17 @@
+# מסד נתונים – נוצר אוטומטית ע"י init_db.py
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# קבצי temp שנוצרים בזמן ייצור ה-PDF
+*_temp.html
+
+# Claude Code
+.claude/
+
+# סביבה וירטואלית
+venv/
+.env
