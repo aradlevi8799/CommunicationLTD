@@ -1,6 +1,6 @@
 """
-init_db.py – יוצר את מסד הנתונים SQLite עם כל הטבלאות הדרושות.
-הרץ קובץ זה פעם אחת לפני שמפעילים את האפליקציה.
+init_db.py – Creates the SQLite database with all required tables.
+Run this once before starting the application.
 """
 import sqlite3
 
@@ -16,20 +16,17 @@ def init_db():
         DROP TABLE IF EXISTS customers;
         DROP TABLE IF EXISTS users;
 
-        -- טבלת משתמשים
         CREATE TABLE IF NOT EXISTS users (
             id                    INTEGER PRIMARY KEY AUTOINCREMENT,
             username              TEXT UNIQUE NOT NULL,
             password_hash         TEXT NOT NULL,
             salt                  TEXT NOT NULL,
             email                 TEXT NOT NULL,
-            -- היסטוריית סיסמאות: JSON של [[hash, salt], ...]
             password_history      TEXT DEFAULT '[]',
             failed_login_attempts INTEGER DEFAULT 0,
             locked                INTEGER DEFAULT 0
         );
 
-        -- טבלת לקוחות (חלק א' סעיף 4)
         CREATE TABLE IF NOT EXISTS customers (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             name       TEXT NOT NULL,
@@ -38,7 +35,6 @@ def init_db():
             package    TEXT
         );
 
-        -- טבלת טוקנים לאיפוס סיסמא (חלק א' סעיף 5)
         CREATE TABLE IF NOT EXISTS reset_tokens (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             username   TEXT NOT NULL,

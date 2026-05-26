@@ -1,23 +1,24 @@
 """
-app_vulnerable.py – גרסה פגיעה (חלק ב' – הדגמת התקפות)
+app_vulnerable.py – Vulnerable version (Part B – attack demonstration).
 
-⚠️  קובץ זה נועד לצרכי לימוד בלבד!
-    הוא מדגים שתי פרצות אבטחה קלאסיות:
+WARNING: For educational purposes only. Do NOT deploy in production.
 
-    פרצה 1 – SQL Injection (SQLi)
-    ===============================
-    בגרסה הפגיעה, שאילתות SQL בנויות בשרשור מחרוזות:
-        query = "SELECT * FROM users WHERE username = '" + username + "'"
-    תוקף יכול להזין:  admin' --
-    התוצאה:           SELECT * FROM users WHERE username = 'admin' --'
-    ה-- מבטל את שאר השאילתה → כניסה ללא סיסמא!
+Vulnerabilities demonstrated:
 
-    פרצה 2 – Stored XSS (Cross-Site Scripting)
-    =============================================
-    בגרסה הפגיעה, שם הלקוח נשמר כמו שהוא ומוצג ללא קידוד:
-        {{ customer.name | safe }}   ← מסמן את הערך כ"בטוח" ועוקף Jinja2
-    תוקף יכול להזין:  <script>alert('XSS')</script>
-    בכל פעם שדף זה ייטען – הסקריפט יורץ אצל כל המשתמשים!
+  SQL Injection (SQLi)
+  --------------------
+  Queries are built by string concatenation instead of parameterized queries:
+      query = "SELECT * FROM users WHERE username = '" + username + "'"
+  Attacker input:  admin' --
+  Result:  SELECT * FROM users WHERE username = 'admin' --'
+  The comment symbol neutralises the rest of the query → login bypassed.
+
+  Stored XSS (Cross-Site Scripting)
+  -----------------------------------
+  Customer name is stored and rendered without HTML encoding:
+      {{ customer.name | safe }}  ← bypasses Jinja2 autoescaping
+  Attacker input:  <script>alert('XSS')</script>
+  Effect: the script executes in every visitor's browser on page load.
 """
 
 import json
@@ -49,16 +50,12 @@ def get_db():
     return conn
 
 
-# ─────────────────────────────────────────────
-
 @app.route("/")
 def index():
     return redirect(url_for("login"))
 
 
-# ─────────────────────────────────────────────
-# סעיף 1: Register – VULNERABLE to SQLi
-# ─────────────────────────────────────────────
+# ── Register – VULNERABLE to SQLi ────────────────────────
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -76,8 +73,8 @@ def register():
 
         conn = sqlite3.connect(DB_PATH)
         try:
-            # ⚠️ VULNERABLE: שרשור מחרוזות – SQLi אפשרי!
-            # קלט זדוני: username = "hacker', 'fakehash', 'fakesalt', 'h@h.com'); --"
+            # VULNERABLE: string concatenation allows SQL injection
+            # Malicious input: username = "hacker', 'fakehash', 'fakesalt', 'h@h.com'); --"
             query = (
                 f"INSERT INTO users (username, password_hash, salt, email) "
                 f"VALUES ('{username}', '{pw_hash}', '{salt}', '{email}')"
@@ -94,9 +91,7 @@ def register():
     return render_template("register.html")
 
 
-# ─────────────────────────────────────────────
-# סעיף 3: Login – VULNERABLE to SQLi
-# ─────────────────────────────────────────────
+# ── Login – VULNERABLE to SQLi ────────────────────────────
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -107,17 +102,14 @@ def login():
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
 
-        # ⚠️ VULNERABLE: שרשור מחרוזות – SQLi קלאסי!
+        # VULNERABLE: string concatenation – classic SQLi
         #
-        # קלט זדוני לעקיפת Login:
-        #   username = "' OR '1'='1' --"
-        #   שאילתה: SELECT * FROM users WHERE username = '' OR '1'='1' --'
-        #   תוצאה: '1'='1' תמיד נכון → מחזיר את כל המשתמשים!
+        # Bypass payload:  ' OR '1'='1' --
+        # Query becomes:   SELECT * FROM users WHERE username = '' OR '1'='1' --'
+        # '1'='1' is always true → returns all rows regardless of username
         #
-        # כיצד עובד ה-bypass:
-        #   כאשר ה-SQL מחזיר שורה (גם ללא username תקין),
-        #   והשם שהוזן שונה מהשם האמיתי במסד → האפליקציה מזהה injection
-        #   ומאפשרת כניסה ללא בדיקת סיסמא (כפי שאפליקציות פגיעות נאיביות עושות).
+        # The app detects injection when the returned username differs from the input
+        # and grants access without verifying the password.
         query = f"SELECT * FROM users WHERE username = '{username}'"
         users = conn.execute(query).fetchall()
         conn.close()
@@ -132,14 +124,12 @@ def login():
             flash("החשבון נעול", "error")
             return render_template("login.html")
 
-        # ⚠️ SQLi BYPASS: אם הוחזרו מספר שורות, או ששם המשתמש שהוזן
-        # שונה מהשם האמיתי (סימן לinjection) – כניסה ללא בדיקת סיסמא!
+        # SQLi bypass: multiple rows returned, or username mismatch, signals injection
         if len(users) > 1 or username.strip() != user["username"]:
             session["username"] = user["username"]
             flash(f"[SQLi] נכנסת כ-{user['username']} ללא סיסמא!", "warning")
             return redirect(url_for("system"))
 
-        # זרימה רגילה – בדיקת סיסמא
         if verify_password(password, user["password_hash"], user["salt"]):
             with get_db() as c:
                 c.execute("UPDATE users SET failed_login_attempts = 0 WHERE username = ?", (username,))
@@ -168,9 +158,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ─────────────────────────────────────────────
-# סעיף 2: Change Password (זהה לגרסה מאובטחת)
-# ─────────────────────────────────────────────
+# ── Change Password (same logic as secure version) ────────
 
 @app.route("/change_password", methods=["GET", "POST"])
 def change_password():
@@ -216,17 +204,21 @@ def change_password():
     return render_template("change_password.html")
 
 
-# ─────────────────────────────────────────────
-# סעיף 5: Forgot Password (זהה לגרסה מאובטחת)
-# ─────────────────────────────────────────────
+# ── Forgot Password – VULNERABLE to SQLi ─────────────────
 
 @app.route("/forgot_password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
 
-        with get_db() as conn:
-            user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        # VULNERABLE: string concatenation allows SQL injection
+        # Payload ' OR '1'='1' -- causes the system to find the first user
+        # even when the submitted username does not exist in the database.
+        query = f"SELECT * FROM users WHERE username = '{username}'"
+        user = conn.execute(query).fetchone()
+        conn.close()
 
         if user:
             token = generate_reset_token()
@@ -279,9 +271,7 @@ def reset_password():
     return render_template("reset_password.html")
 
 
-# ─────────────────────────────────────────────
-# סעיף 4: System – VULNERABLE to Stored XSS + SQLi
-# ─────────────────────────────────────────────
+# ── System – VULNERABLE to Stored XSS + SQLi ─────────────
 
 @app.route("/system", methods=["GET", "POST"])
 def system():
@@ -291,16 +281,16 @@ def system():
     new_customer_name = None
 
     if request.method == "POST":
-        name    = request.form.get("name", "")   # ⚠️ ללא strip() או escape()
+        name    = request.form.get("name", "")   # no strip() or escape() – intentional
         email   = request.form.get("email", "")
         phone   = request.form.get("phone", "")
         package = request.form.get("package", "")
 
         conn = sqlite3.connect(DB_PATH)
         try:
-            # ⚠️ VULNERABLE: שרשור מחרוזות – SQLi + Stored XSS!
-            # קלט זדוני לXSS:   name = "<script>document.cookie</script>"
-            # קלט זדוני לSQLi:  name = "test', 'x','x','x','x'); DROP TABLE customers; --"
+            # VULNERABLE: string concatenation enables both SQLi and stored XSS
+            # XSS payload:  name = "<script>document.cookie</script>"
+            # SQLi payload: name = "test', 'x','x','x'); DROP TABLE customers; --"
             query = (
                 f"INSERT INTO customers (name, email, phone, package) "
                 f"VALUES ('{name}', '{email}', '{phone}', '{package}')"
@@ -308,7 +298,7 @@ def system():
             conn.execute(query)
             conn.commit()
 
-            # ⚠️ שם הלקוח נשמר ללא קידוד – יוצג כ-HTML גולמי בתבנית
+            # Name stored without encoding – rendered as raw HTML in the template
             new_customer_name = name
             flash("לקוח חדש נוסף!", "success")
         except Exception as e:
@@ -325,11 +315,9 @@ def system():
         "system.html",
         customers=customers,
         new_customer_name=new_customer_name,
-        version="vulnerable",  # התבנית תציג את השם ללא קידוד
+        version="vulnerable",
     )
 
-
-# ─────────────────────────────────────────────
 
 if __name__ == "__main__":
     init_db()

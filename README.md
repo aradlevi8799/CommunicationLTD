@@ -15,7 +15,7 @@
 | `utils.py` | פונקציות עזר: HMAC-SHA256, SHA-1, בדיקת מדיניות |
 | `init_db.py` | יצירת/איפוס מסד הנתונים SQLite |
 | `templates/` | דפי HTML בעברית (RTL) |
-| `test_project.py` | 75 בדיקות אוטומטיות |
+| `test_project.py` | 95 בדיקות אוטומטיות |
 | `הסבר_מלא.md` / `.pdf` | מדריך מלא למתחילים |
 
 ---
@@ -56,7 +56,7 @@ python app_vulnerable.py
 
 | התקפה | איפה | הגנה בגרסה המאובטחת |
 |---|---|---|
-| SQL Injection | Register + Login + System | Parameterized Queries (`?`) |
+| SQL Injection | Register + Login + Forgot Password + System | Parameterized Queries (`?`) |
 | Stored XSS | System (הוספת לקוח) | Jinja2 autoescaping + `html.escape()` |
 
 ### הדגמת SQLi ב-Login (port 5001):
@@ -100,7 +100,7 @@ python app_vulnerable.py
 ```bash
 # ודא ששני השרתים רצים, ואז:
 python test_project.py
-# → 75/75 בדיקות עוברות
+# → 95/95 בדיקות עוברות
 ```
 
 ---

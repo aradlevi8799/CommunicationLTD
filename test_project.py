@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-test_project.py - בדיקות מקיפות לפרויקט Comunication_LTD
-מכסה את כל דרישות חלק א' וחלק ב' של עבודת הגמר.
+test_project.py – Comprehensive tests for the CommunicationLTD project.
+Covers all requirements from Part A and Part B.
 """
 
 import sys
@@ -419,6 +418,114 @@ check("System מאובטח משתמש ב-? (Parameterized)",
       "(?, ?, ?, ?)" in src_sec_sys2 or "?, ?, ?, ?" in src_sec_sys2)
 check("app_secure מייבא html.escape",
       "from html import escape" in inspect.getsource(asec))
+
+# ──────────────────────────────────────────────────────────
+# HMAC implementation verification
+# ──────────────────────────────────────────────────────────
+
+section("UTILS.PY - HMAC implementation verification")
+
+import hmac as _hmac_mod
+import hashlib as _hl_mod
+
+h_test, s_test = hash_password("SamePass@1!")
+# Recompute manually to confirm the stored hash really comes from HMAC-SHA256
+expected_hmac = _hmac_mod.new(s_test.encode(), "SamePass@1!".encode(), _hl_mod.sha256).hexdigest()
+check("Stored hash matches manual HMAC-SHA256 recomputation", expected_hmac == h_test)
+check("hash_password source code uses hmac.new", "hmac.new" in inspect.getsource(hash_password))
+
+# ──────────────────────────────────────────────────────────
+# Dictionary attack prevention – all configured entries
+# ──────────────────────────────────────────────────────────
+
+section("Password policy - dictionary attack prevention (all entries)")
+
+for dict_pw in cfg["password_policy"]["dictionary"]:
+    ok, _ = validate_password(dict_pw, cfg)
+    check(f"Dictionary entry '{dict_pw}' rejected", not ok)
+
+# ──────────────────────────────────────────────────────────
+# Password history – full 3-rotation cycle
+# ──────────────────────────────────────────────────────────
+
+section("Password history - full 3-rotation cycle")
+
+s_hist = new_session()
+s_hist.post(f"{SECURE}/register",
+    data={"username": "histcycle", "password": "Cycle0@AA!", "email": "cycle@test.com"},
+    allow_redirects=True)
+s_hist.post(f"{SECURE}/login",
+    data={"username": "histcycle", "password": "Cycle0@AA!"},
+    allow_redirects=True)
+
+# Perform 3 consecutive password changes to push the original (AA) out of history
+for old_pw, new_pw in [
+    ("Cycle0@AA!", "Cycle0@BB!"),
+    ("Cycle0@BB!", "Cycle0@CC!"),
+    ("Cycle0@CC!", "Cycle0@DD!"),
+]:
+    s_hist.post(f"{SECURE}/change_password",
+        data={"current_password": old_pw, "new_password": new_pw},
+        allow_redirects=True)
+
+# AA is no longer in the last-3 history; it must be accepted again
+r = s_hist.post(f"{SECURE}/change_password",
+    data={"current_password": "Cycle0@DD!", "new_password": "Cycle0@AA!"},
+    allow_redirects=True)
+check("Password allowed after rotating out of history window",
+      "שונתה" in r.text or "success" in r.text.lower())
+
+# BB, CC, DD are still in history – reusing DD must be blocked
+s_hist.post(f"{SECURE}/login",
+    data={"username": "histcycle", "password": "Cycle0@AA!"},
+    allow_redirects=True)
+r = s_hist.post(f"{SECURE}/change_password",
+    data={"current_password": "Cycle0@AA!", "new_password": "Cycle0@DD!"},
+    allow_redirects=True)
+check("Recently used password still blocked after subsequent changes",
+      "אחרונות" in r.text or "היסטור" in r.text or "error" in r.text.lower())
+
+# ──────────────────────────────────────────────────────────
+# Unauthenticated access protection
+# ──────────────────────────────────────────────────────────
+
+section("Unauthenticated access protection (secure)")
+
+s_noauth = new_session()
+r_sys = s_noauth.get(f"{SECURE}/system", allow_redirects=False)
+check("/system redirects unauthenticated users (302)", r_sys.status_code == 302)
+
+r_cp = s_noauth.get(f"{SECURE}/change_password", allow_redirects=False)
+check("/change_password redirects unauthenticated users (302)", r_cp.status_code == 302)
+
+# ──────────────────────────────────────────────────────────
+# Forgot password – username enumeration prevention
+# ──────────────────────────────────────────────────────────
+
+section("Forgot password - username enumeration prevention")
+
+s_enum = new_session()
+r = s_enum.post(f"{SECURE}/forgot_password",
+    data={"username": "nonexistent_user_xyz_0001"},
+    allow_redirects=True)
+check("Non-existent user gets 200 with generic message (no error)", r.status_code == 200)
+check("Response does not reveal that user does not exist",
+      "לא קיים" not in r.text and "not found" not in r.text.lower())
+
+# ──────────────────────────────────────────────────────────
+# SQLi in forgot_password – vulnerable version
+# ──────────────────────────────────────────────────────────
+
+section("חלק ב' - SQLi ב-FORGOT PASSWORD (סעיף 5, port 5001)")
+
+src_vuln_fp = inspect.getsource(av.forgot_password)
+check("forgot_password פגיע משתמש בשרשור מחרוזות (f-string)",
+      "f\"SELECT" in src_vuln_fp or "f'SELECT" in src_vuln_fp
+      or "WHERE username = '" in src_vuln_fp)
+
+src_sec_fp = inspect.getsource(asec.forgot_password)
+check("forgot_password מאובטח משתמש ב-? (Parameterized)",
+      "WHERE username = ?" in src_sec_fp)
 
 # ──────────────────────────────────────────────────────────
 # FINAL REPORT

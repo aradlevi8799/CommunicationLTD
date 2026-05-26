@@ -1,14 +1,14 @@
 """
-app_secure.py – גרסה מאובטחת (חלק א' + פתרונות חלק ב')
+app_secure.py – Secure version (Part A + Part B fixes).
 
-הגנות מיושמות:
-  ✓ Parameterized Queries – אין SQLi
-  ✓ Jinja2 autoescaping – אין XSS (תווים מיוחדים מקודדים אוטומטית)
-  ✓ HMAC-SHA256 + Salt    – סיסמאות לא נשמרות בטקסט פשוט
-  ✓ Password Policy       – מדיניות מ-config.json
-  ✓ Password History      – לא ניתן לחזור ל-3 סיסמאות אחרונות
-  ✓ Login Attempt Limit   – נעילה אחרי 3 כישלונות
-  ✓ compare_digest        – מניעת Timing Attack
+Protections implemented:
+  - Parameterized queries (no SQL injection)
+  - Jinja2 autoescaping (no XSS)
+  - HMAC-SHA256 + random salt (passwords never stored in plain text)
+  - Password policy enforced from config.json
+  - Password history: last 3 passwords blocked from reuse
+  - Login attempt limit with account lockout
+  - compare_digest to prevent timing attacks
 """
 
 import json
@@ -28,10 +28,6 @@ from utils import (
     verify_password,
 )
 
-# ─────────────────────────────────────────────
-# אתחול
-# ─────────────────────────────────────────────
-
 app = Flask(__name__)
 config = load_config()
 app.secret_key = config["security"]["secret_key"]
@@ -41,18 +37,16 @@ DB_PATH = "communication_ltd.db"
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # גישה לעמודות לפי שם
+    conn.row_factory = sqlite3.Row
     return conn
 
-
-# ─────────────────────────────────────────────
-# חלק א' – סעיף 1: Register
-# ─────────────────────────────────────────────
 
 @app.route("/")
 def index():
     return redirect(url_for("login"))
 
+
+# ── Register ──────────────────────────────────────────────
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -65,17 +59,14 @@ def register():
             flash("יש למלא את כל השדות", "error")
             return render_template("register.html")
 
-        # בדיקת מדיניות סיסמא
         valid, error_msg = validate_password(password, config)
         if not valid:
             flash(error_msg, "error")
             return render_template("register.html")
 
-        # הצפנה: HMAC-SHA256 + Salt
         pw_hash, salt = hash_password(password)
 
         try:
-            # SECURE: Parameterized Query – הערכים לא מוכנסים ישירות לשאילתה
             with get_db() as conn:
                 conn.execute(
                     "INSERT INTO users (username, password_hash, salt, email) VALUES (?, ?, ?, ?)",
@@ -89,9 +80,7 @@ def register():
     return render_template("register.html")
 
 
-# ─────────────────────────────────────────────
-# חלק א' – סעיף 3: Login
-# ─────────────────────────────────────────────
+# ── Login ─────────────────────────────────────────────────
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -99,14 +88,13 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        # SECURE: Parameterized Query
         with get_db() as conn:
             user = conn.execute(
                 "SELECT * FROM users WHERE username = ?", (username,)
             ).fetchone()
 
         if user is None:
-            # הודעה גנרית – לא מגלים אם המשתמש קיים
+            # Generic message avoids revealing whether the username exists
             flash("שם משתמש או סיסמא שגויים", "error")
             return render_template("login.html")
 
@@ -115,7 +103,6 @@ def login():
             return render_template("login.html")
 
         if verify_password(password, user["password_hash"], user["salt"]):
-            # הצלחה – איפוס מונה ניסיונות
             with get_db() as conn:
                 conn.execute(
                     "UPDATE users SET failed_login_attempts = 0 WHERE username = ?",
@@ -124,7 +111,6 @@ def login():
             session["username"] = username
             return redirect(url_for("system"))
 
-        # כישלון – עדכון מונה
         new_attempts = user["failed_login_attempts"] + 1
         max_attempts = config["security"]["max_login_attempts"]
         locked       = 1 if new_attempts >= max_attempts else 0
@@ -149,9 +135,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ─────────────────────────────────────────────
-# חלק א' – סעיף 2: Change Password
-# ─────────────────────────────────────────────
+# ── Change Password ───────────────────────────────────────
 
 @app.route("/change_password", methods=["GET", "POST"])
 def change_password():
@@ -168,27 +152,24 @@ def change_password():
                 "SELECT * FROM users WHERE username = ?", (username,)
             ).fetchone()
 
-        # אימות סיסמא נוכחית
         if not verify_password(current_pw, user["password_hash"], user["salt"]):
             flash("הסיסמא הנוכחית שגויה", "error")
             return render_template("change_password.html")
 
-        # בדיקת מדיניות
         valid, error_msg = validate_password(new_pw, config)
         if not valid:
             flash(error_msg, "error")
             return render_template("change_password.html")
 
-        # בדיקת היסטוריה
         history = json.loads(user["password_history"])
         if check_password_history(new_pw, history):
             n = config["password_policy"]["history_count"]
             flash(f"לא ניתן להשתמש באחת מ-{n} הסיסמאות האחרונות", "error")
             return render_template("change_password.html")
 
-        # שמירת סיסמא ישנה בהיסטוריה
+        # Push current password into history before replacing it
         history.append([user["password_hash"], user["salt"]])
-        history = history[-config["password_policy"]["history_count"]:]  # שמור רק N אחרונות
+        history = history[-config["password_policy"]["history_count"]:]
 
         new_hash, new_salt = hash_password(new_pw)
 
@@ -204,9 +185,7 @@ def change_password():
     return render_template("change_password.html")
 
 
-# ─────────────────────────────────────────────
-# חלק א' – סעיף 5: Forgot Password
-# ─────────────────────────────────────────────
+# ── Forgot Password ───────────────────────────────────────
 
 @app.route("/forgot_password", methods=["GET", "POST"])
 def forgot_password():
@@ -219,7 +198,7 @@ def forgot_password():
             ).fetchone()
 
         if user:
-            token = generate_reset_token()  # SHA-1 של bytes אקראיים
+            token = generate_reset_token()
 
             with get_db() as conn:
                 conn.execute(
@@ -229,12 +208,12 @@ def forgot_password():
 
             sent = send_reset_email(user["email"], token, config)
             if not sent:
-                # במקרה שהמייל לא הוגדר – מציגים את הטוקן בדף (לצרכי פיתוח בלבד!)
+                # Dev fallback: display token on screen when SMTP is not configured
                 flash(f"[פיתוח] קוד האיפוס: {token}", "info")
             else:
                 flash("קוד איפוס נשלח למייל שלך", "success")
         else:
-            # לא מגלים אם המשתמש קיים
+            # Generic message to prevent username enumeration
             flash("אם המשתמש קיים, קוד איפוס יישלח למייל", "success")
 
         return redirect(url_for("reset_password"))
@@ -278,9 +257,7 @@ def reset_password():
     return render_template("reset_password.html")
 
 
-# ─────────────────────────────────────────────
-# חלק א' – סעיף 4: System (הוספת לקוח)
-# ─────────────────────────────────────────────
+# ── System – Add Customer ─────────────────────────────────
 
 @app.route("/system", methods=["GET", "POST"])
 def system():
@@ -298,15 +275,12 @@ def system():
         if not name:
             flash("שם הלקוח הוא שדה חובה", "error")
         else:
-            # SECURE: Parameterized Query – אין SQLi
             with get_db() as conn:
                 conn.execute(
                     "INSERT INTO customers (name, email, phone, package) VALUES (?, ?, ?, ?)",
                     (name, email, phone, package),
                 )
-
-            # SECURE: escape() מקודד תווי HTML – אין XSS
-            # (Jinja2 עושה זאת אוטומטית בתבנית, escape() כאן הוא שכבת הגנה נוספת)
+            # escape() is an extra defense layer; Jinja2 autoescaping also handles this in the template
             new_customer_name = escape(name)
             flash(f'לקוח חדש נוסף בהצלחה!', "success")
 
@@ -322,10 +296,6 @@ def system():
         version="secure",
     )
 
-
-# ─────────────────────────────────────────────
-# הפעלה
-# ─────────────────────────────────────────────
 
 if __name__ == "__main__":
     init_db()
