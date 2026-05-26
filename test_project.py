@@ -458,11 +458,14 @@ s_hist.post(f"{SECURE}/login",
     data={"username": "histcycle", "password": "Cycle0@AA!"},
     allow_redirects=True)
 
-# Perform 3 consecutive password changes to push the original (AA) out of history
+# Perform 4 consecutive password changes to push the original (AA) out of the
+# 3-entry history. The history stores the last 3 OLD passwords (current is not
+# included), so after 4 rotations the original AA is no longer tracked.
 for old_pw, new_pw in [
     ("Cycle0@AA!", "Cycle0@BB!"),
     ("Cycle0@BB!", "Cycle0@CC!"),
     ("Cycle0@CC!", "Cycle0@DD!"),
+    ("Cycle0@DD!", "Cycle0@EE!"),
 ]:
     s_hist.post(f"{SECURE}/change_password",
         data={"current_password": old_pw, "new_password": new_pw},
@@ -470,12 +473,12 @@ for old_pw, new_pw in [
 
 # AA is no longer in the last-3 history; it must be accepted again
 r = s_hist.post(f"{SECURE}/change_password",
-    data={"current_password": "Cycle0@DD!", "new_password": "Cycle0@AA!"},
+    data={"current_password": "Cycle0@EE!", "new_password": "Cycle0@AA!"},
     allow_redirects=True)
 check("Password allowed after rotating out of history window",
       "שונתה" in r.text or "success" in r.text.lower())
 
-# BB, CC, DD are still in history – reusing DD must be blocked
+# CC, DD, EE are still in history – reusing DD must be blocked
 s_hist.post(f"{SECURE}/login",
     data={"username": "histcycle", "password": "Cycle0@AA!"},
     allow_redirects=True)
